@@ -1,6 +1,7 @@
 --[[
-    CNN v171-11 | РАСШИРЕННЫЙ ТЕНЕВОЙ ПРОТОКОЛ
-    Категории: Aimbot | ESP | Players | Loot
+    CNN v171-11 | GHOST PROTOCOL v2
+    Управление: LeftControl - скрыть/показать GUI
+    GUI можно перетаскивать
 --]]
 
 -- Сервисы
@@ -10,422 +11,351 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
-local TweenService = game:GetService("TweenService")
 
--- Переменные состояния
+-- Переменные
 local aimbotEnabled = false
-local aimbotKey = "X"
 local espEnabled = false
 local autoLootEnabled = false
 local fovRadius = 300
 local target = nil
-local currentCategory = "Aimbot"
 
--- Уничтожение старого GUI если есть
-if game.CoreGui:FindFirstChild("CNN_Expanded") then
-    game.CoreGui.CNN_Expanded:Destroy()
+-- Уничтожение старого GUI
+if game.CoreGui:FindFirstChild("CNN_Ghost") then
+    game.CoreGui.CNN_Ghost:Destroy()
 end
 
--- Создание GUI
+-- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "CNN_Expanded"
+gui.Name = "CNN_Ghost"
 gui.ResetOnSpawn = false
 gui.Parent = game.CoreGui
 
--- Основная панель (ШИРЕ)
+-- Основная панель
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainPanel"
-mainFrame.Size = UDim2.new(0, 380, 0, 460)
-mainFrame.Position = UDim2.new(1, -400, 0.5, -230)
-mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+mainFrame.Name = "Main"
+mainFrame.Size = UDim2.new(0, 380, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -190, 0.5, -210)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
 mainFrame.BorderSizePixel = 0
 mainFrame.BackgroundTransparency = 0.05
+mainFrame.Active = true
 mainFrame.Parent = gui
 
 -- Заголовок
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 45)
-titleBar.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(160, 15, 15)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 1, 0)
-title.Text = "CNN v171-11 | GHOST PROTOCOL"
+title.Size = UDim2.new(0.8, 0, 1, 0)
+title.Text = "CNN v171-11 | GHOST"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 18
+title.TextSize = 16
 title.Font = Enum.Font.GothamBlack
+title.BackgroundTransparency = 1
 title.Parent = titleBar
 
--- Навигационные вкладки
+-- Кнопка закрытия
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 35, 0, 30)
+closeBtn.Position = UDim2.new(1, -40, 0, 5)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 16
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+end)
+
+-- ПЕРЕТАСКИВАНИЕ GUI
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+gui.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Навигация
 local navFrame = Instance.new("Frame")
 navFrame.Size = UDim2.new(1, 0, 0, 35)
-navFrame.Position = UDim2.new(0, 0, 0, 45)
-navFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+navFrame.Position = UDim2.new(0, 0, 0, 40)
+navFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 navFrame.BorderSizePixel = 0
 navFrame.Parent = mainFrame
 
--- Контентная область
+-- Контент
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, 0, 1, -80)
-contentFrame.Position = UDim2.new(0, 0, 0, 80)
-contentFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+contentFrame.Size = UDim2.new(1, 0, 1, -75)
+contentFrame.Position = UDim2.new(0, 0, 0, 75)
+contentFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
 contentFrame.BorderSizePixel = 0
 contentFrame.Parent = mainFrame
 
--- Вкладка AIMBOT
+-- СТРАНИЦЫ
+-- AIMBOT
 local aimbotPage = Instance.new("ScrollingFrame")
 aimbotPage.Size = UDim2.new(1, 0, 1, 0)
 aimbotPage.BackgroundTransparency = 1
-aimbotPage.ScrollBarThickness = 4
-aimbotPage.ScrollBarImageColor3 = Color3.fromRGB(180, 20, 20)
+aimbotPage.ScrollBarThickness = 3
 aimbotPage.Visible = true
 aimbotPage.Parent = contentFrame
 
-local aimbotContent = Instance.new("Frame")
-aimbotContent.Size = UDim2.new(1, 0, 0, 400)
-aimbotContent.BackgroundTransparency = 1
-aimbotContent.Parent = aimbotPage
+local function makeAimbotPage()
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(0.9, 0, 0, 30)
+    t.Position = UDim2.new(0.05, 0, 0, 10)
+    t.Text = "🎯 AIMBOT [X]"
+    t.TextColor3 = Color3.fromRGB(255, 80, 80)
+    t.Font = Enum.Font.GothamBold
+    t.BackgroundTransparency = 1
+    t.Parent = aimbotPage
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, 50)
+    btn.Text = "AIMBOT: OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BorderSizePixel = 0
+    btn.Parent = aimbotPage
+    
+    btn.MouseButton1Click:Connect(function()
+        aimbotEnabled = not aimbotEnabled
+        btn.Text = aimbotEnabled and "AIMBOT: ON" or "AIMBOT: OFF"
+        btn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(160, 15, 15) or Color3.fromRGB(40, 40, 40)
+    end)
+end
+makeAimbotPage()
 
--- Заголовок категории
-local aimbotTitle = Instance.new("TextLabel")
-aimbotTitle.Size = UDim2.new(1, 0, 0, 35)
-aimbotTitle.Text = "🎯 AIMBOT SETTINGS"
-aimbotTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-aimbotTitle.TextSize = 18
-aimbotTitle.Font = Enum.Font.GothamBold
-aimbotTitle.BackgroundTransparency = 1
-aimbotTitle.Parent = aimbotContent
-
--- Тоггл аимбота
-local aimbotToggle = Instance.new("TextButton")
-aimbotToggle.Size = UDim2.new(0.9, 0, 0, 45)
-aimbotToggle.Position = UDim2.new(0.05, 0, 0, 45)
-aimbotToggle.Text = "AIMBOT: OFF [Клавиша X]"
-aimbotToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimbotToggle.TextSize = 15
-aimbotToggle.Font = Enum.Font.Gotham
-aimbotToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-aimbotToggle.BorderSizePixel = 0
-aimbotToggle.Parent = aimbotContent
-
-local aimbotActive = false
-aimbotToggle.MouseButton1Click:Connect(function()
-    aimbotActive = not aimbotActive
-    aimbotEnabled = aimbotActive
-    if aimbotActive then
-        aimbotToggle.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-        aimbotToggle.Text = "AIMBOT: ON [Клавиша X]"
-    else
-        aimbotToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        aimbotToggle.Text = "AIMBOT: OFF [Клавиша X]"
-    end
-end)
-
--- FOV слайдер
-local fovLabel = Instance.new("TextLabel")
-fovLabel.Size = UDim2.new(0.9, 0, 0, 25)
-fovLabel.Position = UDim2.new(0.05, 0, 0, 105)
-fovLabel.Text = "FOV Radius: 300"
-fovLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-fovLabel.TextSize = 13
-fovLabel.Font = Enum.Font.Gotham
-fovLabel.BackgroundTransparency = 1
-fovLabel.Parent = aimbotContent
-
-local fovSlider = Instance.new("TextBox")
-fovSlider.Size = UDim2.new(0.4, 0, 0, 30)
-fovSlider.Position = UDim2.new(0.55, 0, 0, 103)
-fovSlider.Text = "300"
-fovSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-fovSlider.PlaceholderText = "FOV"
-fovSlider.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-fovSlider.BorderSizePixel = 0
-fovSlider.Parent = aimbotContent
-
-fovSlider.FocusLost:Connect(function()
-    fovRadius = tonumber(fovSlider.Text) or 300
-    fovLabel.Text = "FOV Radius: " .. fovRadius
-end)
-
--- Вкладка ESP
+-- ESP
 local espPage = Instance.new("ScrollingFrame")
 espPage.Size = UDim2.new(1, 0, 1, 0)
 espPage.BackgroundTransparency = 1
-espPage.ScrollBarThickness = 4
-espPage.ScrollBarImageColor3 = Color3.fromRGB(180, 20, 20)
+espPage.ScrollBarThickness = 3
 espPage.Visible = false
 espPage.Parent = contentFrame
 
-local espContent = Instance.new("Frame")
-espContent.Size = UDim2.new(1, 0, 0, 400)
-espContent.BackgroundTransparency = 1
-espContent.Parent = espPage
+local function makeEspPage()
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(0.9, 0, 0, 30)
+    t.Position = UDim2.new(0.05, 0, 0, 10)
+    t.Text = "👁 ESP HIGHLIGHT"
+    t.TextColor3 = Color3.fromRGB(255, 80, 80)
+    t.Font = Enum.Font.GothamBold
+    t.BackgroundTransparency = 1
+    t.Parent = espPage
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, 50)
+    btn.Text = "ESP: OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BorderSizePixel = 0
+    btn.Parent = espPage
+    
+    btn.MouseButton1Click:Connect(function()
+        espEnabled = not espEnabled
+        btn.Text = espEnabled and "ESP: ON" or "ESP: OFF"
+        btn.BackgroundColor3 = espEnabled and Color3.fromRGB(160, 15, 15) or Color3.fromRGB(40, 40, 40)
+        updateESP()
+    end)
+end
+makeEspPage()
 
-local espTitle = Instance.new("TextLabel")
-espTitle.Size = UDim2.new(1, 0, 0, 35)
-espTitle.Text = "👁 ESP HIGHLIGHTS"
-espTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-espTitle.TextSize = 18
-espTitle.Font = Enum.Font.GothamBold
-espTitle.BackgroundTransparency = 1
-espTitle.Parent = espContent
-
--- Тоггл ESP
-local espToggle = Instance.new("TextButton")
-espToggle.Size = UDim2.new(0.9, 0, 0, 45)
-espToggle.Position = UDim2.new(0.05, 0, 0, 45)
-espToggle.Text = "ESP: OFF"
-espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-espToggle.TextSize = 15
-espToggle.Font = Enum.Font.Gotham
-espToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-espToggle.BorderSizePixel = 0
-espToggle.Parent = espContent
-
-local espActive = false
-espToggle.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    espEnabled = espActive
-    updateESP(espActive)
-    if espActive then
-        espToggle.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-        espToggle.Text = "ESP: ON"
-    else
-        espToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        espToggle.Text = "ESP: OFF"
-    end
-end)
-
--- Вкладка PLAYERS (СПИСОК + ФЛИНГ)
+-- PLAYERS
 local playersPage = Instance.new("ScrollingFrame")
 playersPage.Size = UDim2.new(1, 0, 1, 0)
 playersPage.BackgroundTransparency = 1
-playersPage.ScrollBarThickness = 4
-playersPage.ScrollBarImageColor3 = Color3.fromRGB(180, 20, 20)
+playersPage.ScrollBarThickness = 3
 playersPage.Visible = false
 playersPage.Parent = contentFrame
 
-local playersContent = Instance.new("Frame")
-playersContent.Size = UDim2.new(1, 0, 0, 800)
-playersContent.BackgroundTransparency = 1
-playersContent.Parent = playersPage
-
-local playersTitle = Instance.new("TextLabel")
-playersTitle.Size = UDim2.new(1, 0, 0, 35)
-playersTitle.Text = "👥 PLAYER LIST"
-playersTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-playersTitle.TextSize = 18
-playersTitle.Font = Enum.Font.GothamBold
-playersTitle.BackgroundTransparency = 1
-playersTitle.Parent = playersContent
-
--- Список игроков
-local playerList = Instance.new("Frame")
-playerList.Size = UDim2.new(0.9, 0, 0, 320)
-playerList.Position = UDim2.new(0.05, 0, 0, 45)
-playerList.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-playerList.BorderSizePixel = 0
-playerList.Parent = playersContent
-
 local playerScrollingList = Instance.new("ScrollingFrame")
-playerScrollingList.Size = UDim2.new(1, 0, 1, 0)
-playerScrollingList.BackgroundTransparency = 1
-playerScrollingList.ScrollBarThickness = 3
-playerScrollingList.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-playerScrollingList.Parent = playerList
+playerScrollingList.Size = UDim2.new(0.9, 0, 0, 280)
+playerScrollingList.Position = UDim2.new(0.05, 0, 0, 10)
+playerScrollingList.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+playerScrollingList.BorderSizePixel = 0
+playerScrollingList.Parent = playersPage
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 3)
+listLayout.Padding = UDim.new(0, 2)
 listLayout.Parent = playerScrollingList
 
--- Функция обновления списка игроков
-local function updatePlayerList()
-    for _, child in pairs(playerScrollingList:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
+function updatePlayerList()
+    for _, v in pairs(playerScrollingList:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
     end
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        local playerFrame = Instance.new("Frame")
-        playerFrame.Size = UDim2.new(1, 0, 0, 40)
-        playerFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-        playerFrame.BorderSizePixel = 0
-        playerFrame.Parent = playerScrollingList
+    for _, p in pairs(Players:GetPlayers()) do
+        local f = Instance.new("Frame")
+        f.Size = UDim2.new(1, 0, 0, 35)
+        f.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+        f.BorderSizePixel = 0
+        f.Parent = playerScrollingList
         
-        local playerName = Instance.new("TextLabel")
-        playerName.Size = UDim2.new(0.55, 0, 1, 0)
-        playerName.Position = UDim2.new(0.05, 0, 0, 0)
-        playerName.Text = player.Name
-        playerName.TextColor3 = Color3.fromRGB(255, 255, 255)
-        playerName.TextSize = 13
-        playerName.Font = Enum.Font.Gotham
-        playerName.BackgroundTransparency = 1
-        playerName.Parent = playerFrame
+        local n = Instance.new("TextLabel")
+        n.Size = UDim2.new(0.55, 0, 1, 0)
+        n.Position = UDim2.new(0.03, 0, 0, 0)
+        n.Text = p.Name
+        n.TextColor3 = Color3.fromRGB(255, 255, 255)
+        n.TextSize = 12
+        n.Font = Enum.Font.Gotham
+        n.BackgroundTransparency = 1
+        n.Parent = f
         
-        -- Кнопка ФЛИНГ
-        local flingButton = Instance.new("TextButton")
-        flingButton.Size = UDim2.new(0.35, 0, 0.7, 0)
-        flingButton.Position = UDim2.new(0.62, 0, 0.15, 0)
-        flingButton.Text = "FLING"
-        flingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        flingButton.TextSize = 11
-        flingButton.Font = Enum.Font.GothamBold
-        flingButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-        flingButton.BorderSizePixel = 0
-        flingButton.Parent = playerFrame
+        local flingBtn = Instance.new("TextButton")
+        flingBtn.Size = UDim2.new(0.38, 0, 0.7, 0)
+        flingBtn.Position = UDim2.new(0.6, 0, 0.15, 0)
+        flingBtn.Text = "FLING"
+        flingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flingBtn.TextSize = 11
+        flingBtn.Font = Enum.Font.GothamBold
+        flingBtn.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
+        flingBtn.BorderSizePixel = 0
+        flingBtn.Parent = f
         
-        flingButton.MouseButton1Click:Connect(function()
-            flingPlayer(player)
+        flingBtn.MouseButton1Click:Connect(function()
+            if p.Character then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChild("Humanoid")
+                if hrp and hum then
+                    hrp.Velocity = Vector3.new(0, 8000, 0)
+                    hrp.RotVelocity = Vector3.new(6000, 6000, 6000)
+                    hum.PlatformStand = true
+                    task.wait(0.3)
+                    hum.PlatformStand = false
+                end
+            end
         end)
     end
 end
+updatePlayerList()
 
--- Функция флинга
-local function flingPlayer(targetPlayer)
-    if targetPlayer and targetPlayer.Character then
-        local character = targetPlayer.Character
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character:FindFirstChild("Humanoid")
-        
-        if humanoidRootPart and humanoid then
-            humanoidRootPart.Velocity = Vector3.new(0, 5000, 0)
-            humanoidRootPart.RotVelocity = Vector3.new(5000, 5000, 5000)
-            humanoid.PlatformStand = true
-            wait(0.5)
-            humanoid.PlatformStand = false
-        end
-    end
-end
-
--- Вкладка LOOT
+-- LOOT
 local lootPage = Instance.new("ScrollingFrame")
 lootPage.Size = UDim2.new(1, 0, 1, 0)
 lootPage.BackgroundTransparency = 1
-lootPage.ScrollBarThickness = 4
-lootPage.ScrollBarImageColor3 = Color3.fromRGB(180, 20, 20)
+lootPage.ScrollBarThickness = 3
 lootPage.Visible = false
 lootPage.Parent = contentFrame
 
-local lootContent = Instance.new("Frame")
-lootContent.Size = UDim2.new(1, 0, 0, 400)
-lootContent.BackgroundTransparency = 1
-lootContent.Parent = lootPage
-
-local lootTitle = Instance.new("TextLabel")
-lootTitle.Size = UDim2.new(1, 0, 0, 35)
-lootTitle.Text = "🔫 AUTO LOOT"
-lootTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-lootTitle.TextSize = 18
-lootTitle.Font = Enum.Font.GothamBold
-lootTitle.BackgroundTransparency = 1
-lootTitle.Parent = lootContent
-
--- Тоггл автолута
-local lootToggle = Instance.new("TextButton")
-lootToggle.Size = UDim2.new(0.9, 0, 0, 45)
-lootToggle.Position = UDim2.new(0.05, 0, 0, 45)
-lootToggle.Text = "AUTO-LOOT PISTOL: OFF"
-lootToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-lootToggle.TextSize = 15
-lootToggle.Font = Enum.Font.Gotham
-lootToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-lootToggle.BorderSizePixel = 0
-lootToggle.Parent = lootContent
-
-local lootActive = false
-lootToggle.MouseButton1Click:Connect(function()
-    lootActive = not lootActive
-    autoLootEnabled = lootActive
-    if lootActive then
-        lootToggle.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-        lootToggle.Text = "AUTO-LOOT PISTOL: ON"
-    else
-        lootToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        lootToggle.Text = "AUTO-LOOT PISTOL: OFF"
-    end
-end)
+local function makeLootPage()
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(0.9, 0, 0, 30)
+    t.Position = UDim2.new(0.05, 0, 0, 10)
+    t.Text = "🔫 AUTO LOOT PISTOL"
+    t.TextColor3 = Color3.fromRGB(255, 80, 80)
+    t.Font = Enum.Font.GothamBold
+    t.BackgroundTransparency = 1
+    t.Parent = lootPage
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, 50)
+    btn.Text = "AUTO-LOOT: OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BorderSizePixel = 0
+    btn.Parent = lootPage
+    
+    btn.MouseButton1Click:Connect(function()
+        autoLootEnabled = not autoLootEnabled
+        btn.Text = autoLootEnabled and "AUTO-LOOT: ON" or "AUTO-LOOT: OFF"
+        btn.BackgroundColor3 = autoLootEnabled and Color3.fromRGB(160, 15, 15) or Color3.fromRGB(40, 40, 40)
+    end)
+end
+makeLootPage()
 
 -- НАВИГАЦИЯ
-local categories = {"🎯 Aimbot", "👁 ESP", "👥 Players", "🔫 Loot"}
 local pages = {aimbotPage, espPage, playersPage, lootPage}
-local navButtons = {}
+local navNames = {"🎯 Aimbot", "👁 ESP", "👥 Players", "🔫 Loot"}
+local navBtns = {}
 
-for i, catName in ipairs(categories) do
+for i, name in ipairs(navNames) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.25, 0, 1, 0)
-    btn.Position = UDim2.new((i-1) * 0.25, 0, 0, 0)
-    btn.Text = catName
+    btn.Position = UDim2.new((i-1)*0.25, 0, 0, 0)
+    btn.Text = name
     btn.TextColor3 = Color3.fromRGB(180, 180, 180)
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.Font = Enum.Font.GothamBold
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
     btn.BorderSizePixel = 0
     btn.Parent = navFrame
     
     btn.MouseButton1Click:Connect(function()
-        for _, page in pairs(pages) do
-            page.Visible = false
-        end
-        for _, b in pairs(navButtons) do
-            b.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+        for _, p in pairs(pages) do p.Visible = false end
+        for _, b in pairs(navBtns) do
+            b.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
             b.TextColor3 = Color3.fromRGB(180, 180, 180)
         end
         pages[i].Visible = true
-        btn.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
+        btn.BackgroundColor3 = Color3.fromRGB(160, 15, 15)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        currentCategory = catName
     end)
-    
-    table.insert(navButtons, btn)
+    table.insert(navBtns, btn)
 end
+navBtns[1].BackgroundColor3 = Color3.fromRGB(160, 15, 15)
+navBtns[1].TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Активация первой вкладки
-navButtons[1].BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-navButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
-
--- Функция ESP
-function updateESP(state)
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local existing = player.Character:FindFirstChild("CNN_ESP")
-            if state then
+-- ESP функция
+function updateESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local existing = p.Character:FindFirstChild("CNN_ESP")
+            if espEnabled then
                 if not existing then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Name = "CNN_ESP"
-                    highlight.FillTransparency = 0.5
-                    highlight.FillColor = Color3.fromRGB(255, 30, 30)
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.OutlineTransparency = 0.2
-                    highlight.Parent = player.Character
+                    local h = Instance.new("Highlight")
+                    h.Name = "CNN_ESP"
+                    h.FillTransparency = 0.5
+                    h.FillColor = Color3.fromRGB(255, 20, 20)
+                    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    h.Parent = p.Character
                 end
             else
-                if existing then
-                    existing:Destroy()
-                end
+                if existing then existing:Destroy() end
             end
         end
     end
 end
 
--- Аимбот функция
-local function getClosestPlayer()
+-- Аимбот
+local function getClosest()
     local closest = nil
-    local shortestDistance = fovRadius
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local head = player.Character:FindFirstChild("Head")
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
-            if head and root and LocalPlayer.Character then
-                local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if localRoot then
-                    local distance = (root.Position - localRoot.Position).Magnitude
-                    if distance < shortestDistance then
-                        shortestDistance = distance
-                        closest = player
-                    end
+    local minDist = fovRadius
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and myHrp then
+                local dist = (hrp.Position - myHrp.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    closest = p
                 end
             end
         end
@@ -433,29 +363,27 @@ local function getClosestPlayer()
     return closest
 end
 
--- Основной игровой цикл
+-- Игровой цикл
 RunService.RenderStepped:Connect(function()
     -- Аимбот на X
     if aimbotEnabled and UserInputService:IsKeyDown(Enum.KeyCode.X) then
-        target = getClosestPlayer()
+        target = getClosest()
         if target and target.Character then
             local head = target.Character:FindFirstChild("Head")
             if head then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
             end
         end
-    else
-        target = nil
     end
     
-    -- Автолут пистолетов
+    -- Автолут ТОЛЬКО пистолета (без флинга)
     if autoLootEnabled then
         pcall(function()
             for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and (obj.Name:lower():find("gun") or obj.Name:lower():find("pistol")) then
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local root = LocalPlayer.Character.HumanoidRootPart
-                        if (root.Position - obj.Position).Magnitude < 12 then
+                if obj:IsA("BasePart") and obj.Name:lower():find("pistol") then
+                    if LocalPlayer.Character then
+                        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if root and (root.Position - obj.Position).Magnitude < 12 then
                             firetouchinterest(root, obj, 0)
                             firetouchinterest(root, obj, 1)
                         end
@@ -466,18 +394,16 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Обновление списка игроков при изменениях
-Players.PlayerAdded:Connect(function()
-    wait(0.5)
-    updatePlayerList()
+-- Открытие/закрытие GUI на LeftControl
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        mainFrame.Visible = not mainFrame.Visible
+    end
 end)
 
-Players.PlayerRemoving:Connect(function()
-    wait(0.5)
-    updatePlayerList()
-end)
+-- Обновление списка игроков
+Players.PlayerAdded:Connect(function() task.wait(0.3); updatePlayerList(); updateESP() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.3); updatePlayerList(); updateESP() end)
 
--- Первичная загрузка списка
-updatePlayerList()
-
-print("CNN: GHOST PROTOCOL FULLY ACTIVE.")
+print("CNN: GHOST PROTOCOL v2 LOADED")
